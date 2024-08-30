@@ -400,7 +400,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Year Progress Bar Animation</title>
+    <title>Year Progress Bar with Year Transition</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -418,7 +418,7 @@
             letter-spacing: 2px;
             margin-bottom: 20px;
         }
-        .days-remaining {
+        .days-remaining, .next-year {
             font-size: 18px;
         }
     </style>
@@ -428,6 +428,7 @@
 <div class="progress-container">
     <div id="progress-bar" class="progress-bar"></div>
     <div id="days-remaining" class="days-remaining"></div>
+    <div id="next-year" class="next-year"></div>
 </div>
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -457,12 +458,15 @@
         return '■'.repeat(filledBars) + '□'.repeat(emptyBars);
     }
 
-    // Function to update the progress bar and days remaining
+    // Function to update the progress bar, days remaining, and next year
     function updateProgressBar() {
         const progress = calculateYearProgress();
         const daysRemaining = calculateDaysRemaining();
+        const nextYear = new Date().getFullYear() + 1;
+
         const progressBarElement = d3.select("#progress-bar");
         const daysRemainingElement = d3.select("#days-remaining");
+        const nextYearElement = d3.select("#next-year");
 
         // Animate the progress bar
         progressBarElement.transition()
@@ -481,7 +485,17 @@
             .tween("text", function() {
                 const i = d3.interpolate(daysRemaining + 50, daysRemaining); // Adjust start value for a smoother animation
                 return function(t) {
-                    daysRemainingElement.text(`${Math.ceil(i(t))} days to go for 2025.`);
+                    daysRemainingElement.text(`${Math.ceil(i(t))} days to go for ${nextYear}.`);
+                };
+            });
+
+        // Animate the upcoming year display
+        nextYearElement.transition()
+            .duration(2000)
+            .tween("text", function() {
+                const i = d3.interpolate(0, nextYear);
+                return function(t) {
+                    nextYearElement.text(`Upcoming Year: ${Math.floor(i(t))}`);
                 };
             });
     }
