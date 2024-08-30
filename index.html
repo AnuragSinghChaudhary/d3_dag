@@ -260,7 +260,7 @@
  -->
 
 
- <!DOCTYPE html>
+<!--  <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -392,5 +392,94 @@
             d.fy = null;
         }
     </script>
+</body>
+</html>
+ -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Year Progress Bar</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .progress-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .progress-bar {
+            display: inline-block;
+            font-size: 24px;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+        .days-remaining {
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="progress-container">
+    <div id="progress-bar" class="progress-bar"></div>
+    <div id="days-remaining" class="days-remaining"></div>
+</div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+    // Function to calculate the current year progress percentage
+    function calculateYearProgress() {
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        const yearProgress = (now - startOfYear) / (endOfYear - startOfYear);
+        return Math.floor(yearProgress * 100);
+    }
+
+    // Function to calculate the remaining days in the year
+    function calculateDaysRemaining() {
+        const now = new Date();
+        const endOfYear = new Date(now.getFullYear(), 11, 31);
+        const timeDifference = endOfYear - now;
+        return Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
+    }
+
+    // Function to create the progress bar string
+    function createProgressBar(progress) {
+        const totalBars = 20;
+        const filledBars = Math.floor((progress / 100) * totalBars);
+        const emptyBars = totalBars - filledBars;
+        return '■'.repeat(filledBars) + '□'.repeat(emptyBars);
+    }
+
+    // Function to update the progress bar and days remaining
+    function updateProgressBar() {
+        const progress = calculateYearProgress();
+        const daysRemaining = calculateDaysRemaining();
+        d3.select("#progress-bar")
+            .text(`Year Progress: ${createProgressBar(progress)} ${progress}%`)
+            .transition()
+            .duration(2000)
+            .ease(d3.easeLinear)
+            .style("color", "black"); // Add any animation style here
+        
+        d3.select("#days-remaining")
+            .text(`${daysRemaining} days to go for 2025.`);
+    }
+
+    // Initial call to update the progress bar
+    updateProgressBar();
+
+    // Update the progress bar every day
+    setInterval(updateProgressBar, 86400000); // 86400000ms = 1 day
+
+</script>
+
 </body>
 </html>
