@@ -395,13 +395,12 @@
 </body>
 </html>
  -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Year Progress Bar</title>
+    <title>Year Progress Bar Animation</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -462,15 +461,29 @@
     function updateProgressBar() {
         const progress = calculateYearProgress();
         const daysRemaining = calculateDaysRemaining();
-        d3.select("#progress-bar")
-            .text(`Year Progress: ${createProgressBar(progress)} ${progress}%`)
-            .transition()
+        const progressBarElement = d3.select("#progress-bar");
+        const daysRemainingElement = d3.select("#days-remaining");
+
+        // Animate the progress bar
+        progressBarElement.transition()
             .duration(2000)
-            .ease(d3.easeLinear)
-            .style("color", "black"); // Add any animation style here
-        
-        d3.select("#days-remaining")
-            .text(`${daysRemaining} days to go for 2025.`);
+            .tween("text", function() {
+                const i = d3.interpolate(0, progress);
+                return function(t) {
+                    const interpolatedProgress = Math.floor(i(t));
+                    progressBarElement.text(`Year Progress: ${createProgressBar(interpolatedProgress)} ${interpolatedProgress}%`);
+                };
+            });
+
+        // Animate the days remaining
+        daysRemainingElement.transition()
+            .duration(2000)
+            .tween("text", function() {
+                const i = d3.interpolate(daysRemaining + 50, daysRemaining); // Adjust start value for a smoother animation
+                return function(t) {
+                    daysRemainingElement.text(`${Math.ceil(i(t))} days to go for 2025.`);
+                };
+            });
     }
 
     // Initial call to update the progress bar
