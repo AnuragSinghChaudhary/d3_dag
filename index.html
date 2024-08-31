@@ -495,7 +495,7 @@
             .tween("text", function() {
                 const i = d3.interpolate(0, nextYear);
                 return function(t) {
-                    nextYearElement.text(`Upcoming Year: ${Math.floor(i(t))}`);
+                    // nextYearElement.text(`Upcoming Year: ${Math.floor(i(t))}`);
                 };
             });
     }
