@@ -400,113 +400,236 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Year Progress Bar with Year Transition</title>
+    <title>Crypto Market Tree Visualization</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
+        .node circle {
+            fill: steelblue;
+            stroke: #fff;
+            stroke-width: 2px;
         }
-        .progress-container {
-            width: 100%;
-            max-width: 600px;
-            margin: 0 auto;
-            text-align: center;
+
+        .node text {
+            font: 12px sans-serif;
         }
-        .progress-bar {
-            display: inline-block;
-            font-size: 24px;
-            letter-spacing: 2px;
-            margin-bottom: 20px;
-        }
-        .days-remaining, .next-year {
-            font-size: 18px;
+
+        .link {
+            fill: none;
+            stroke: #ccc;
+            stroke-width: 2px;
         }
     </style>
 </head>
 <body>
+    <svg width="960" height="800"></svg>
 
-<div class="progress-container">
-    <div id="progress-bar" class="progress-bar"></div>
-    <div id="days-remaining" class="days-remaining"></div>
-    <div id="next-year" class="next-year"></div>
-</div>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script>
+        // Data structure
+        var treeData = {
+            "name": "Crypto Market",
+            "children": [
+                {
+                    "name": "Centralized Financial App",
+                    "children": [
+                        {"name": "Binance"},
+                        {"name": "Coinbase"},
+                        {"name": "FTX"}
+                    ]
+                },
+                {
+                    "name": "Fiat Onramp & Payment",
+                    "children": [
+                        {"name": "MoonPay"},
+                        {"name": "Simplex"}
+                    ]
+                },
+                {
+                    "name": "Lending",
+                    "children": [
+                        {"name": "Nexo"},
+                        {"name": "Matrixport"}
+                    ]
+                },
+                {
+                    "name": "Gaming",
+                    "children": [
+                        {"name": "Axie Infinity"},
+                        {"name": "Illuvium"}
+                    ]
+                }
+            ]
+        };
 
-<script src="https://d3js.org/d3.v7.min.js"></script>
-<script>
-    // Function to calculate the current year progress percentage
-    function calculateYearProgress() {
-        const now = new Date();
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
-        const yearProgress = (now - startOfYear) / (endOfYear - startOfYear);
-        return Math.floor(yearProgress * 100);
-    }
+        // Set up SVG dimensions
+        var margin = {top: 20, right: 120, bottom: 20, left: 120},
+            width = 960 - margin.right - margin.left,
+            height = 800 - margin.top - margin.bottom;
 
-    // Function to calculate the remaining days in the year
-    function calculateDaysRemaining() {
-        const now = new Date();
-        const endOfYear = new Date(now.getFullYear(), 11, 31);
-        const timeDifference = endOfYear - now;
-        return Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
-    }
+        var svg = d3.select("svg")
+            .attr("width", width + margin.right + margin.left)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    // Function to create the progress bar string
-    function createProgressBar(progress) {
-        const totalBars = 20;
-        const filledBars = Math.floor((progress / 100) * totalBars);
-        const emptyBars = totalBars - filledBars;
-        return '■'.repeat(filledBars) + '□'.repeat(emptyBars);
-    }
+        var i = 0,
+            duration = 750,
+            root;
 
-    // Function to update the progress bar, days remaining, and next year
-    function updateProgressBar() {
-        const progress = calculateYearProgress();
-        const daysRemaining = calculateDaysRemaining();
-        const nextYear = new Date().getFullYear() + 1;
+        var treemap = d3.tree().size([height, width]);
 
-        const progressBarElement = d3.select("#progress-bar");
-        const daysRemainingElement = d3.select("#days-remaining");
-        const nextYearElement = d3.select("#next-year");
+        // Assigns the data to a hierarchy using parent-child relationships
+        root = d3.hierarchy(treeData, function(d) { return d.children; });
+        root.x0 = height / 2;
+        root.y0 = 0;
 
-        // Animate the progress bar
-        progressBarElement.transition()
-            .duration(2000)
-            .tween("text", function() {
-                const i = d3.interpolate(0, progress);
-                return function(t) {
-                    const interpolatedProgress = Math.floor(i(t));
-                    progressBarElement.text(`Year Progress: ${createProgressBar(interpolatedProgress)} ${interpolatedProgress}%`);
-                };
+        // Collapse after the second level
+        root.children.forEach(collapse);
+
+        update(root);
+
+        // Collapse the node and all its children
+        function collapse(d) {
+            if (d.children) {
+                d._children = d.children;
+                d._children.forEach(collapse);
+                d.children = null;
+            }
+        }
+
+        function update(source) {
+            var treeData = treemap(root);
+
+            // Compute the new tree layout.
+            var nodes = treeData.descendants(),
+                links = treeData.descendants().slice(1);
+
+            // Normalize for fixed-depth.
+            nodes.forEach(function(d) { d.y = d.depth * 180; });
+
+            // ****************** Nodes section ***************************
+
+            var node = svg.selectAll('g.node')
+                .data(nodes, function(d) { return d.id || (d.id = ++i); });
+
+            // Enter any new nodes at the parent's previous position.
+            var nodeEnter = node.enter().append('g')
+                .attr('class', 'node')
+                .attr("transform", function(d) {
+                    return "translate(" + source.y0 + "," + source.x0 + ")";
+                })
+                .on('click', click);
+
+            // Add Circle for the nodes
+            nodeEnter.append('circle')
+                .attr('class', 'node')
+                .attr('r', 1e-6)
+                .style("fill", function(d) {
+                    return d._children ? "lightsteelblue" : "#fff";
+                });
+
+            // Add labels for the nodes
+            nodeEnter.append('text')
+                .attr("dy", ".35em")
+                .attr("x", function(d) {
+                    return d.children || d._children ? -13 : 13;
+                })
+                .attr("text-anchor", function(d) {
+                    return d.children || d._children ? "end" : "start";
+                })
+                .text(function(d) { return d.data.name; });
+
+            // UPDATE
+            var nodeUpdate = nodeEnter.merge(node);
+
+            // Transition to the proper position for the node
+            nodeUpdate.transition()
+                .duration(duration)
+                .attr("transform", function(d) { 
+                    return "translate(" + d.y + "," + d.x + ")";
+                });
+
+            // Update the node attributes and style
+            nodeUpdate.select('circle.node')
+                .attr('r', 10)
+                .style("fill", function(d) {
+                    return d._children ? "lightsteelblue" : "#fff";
+                })
+                .attr('cursor', 'pointer');
+
+
+            // Remove any exiting nodes
+            var nodeExit = node.exit().transition()
+                .duration(duration)
+                .attr("transform", function(d) {
+                    return "translate(" + source.y + "," + source.x + ")";
+                })
+                .remove();
+
+            // On exit reduce the node circles size to 0
+            nodeExit.select('circle')
+                .attr('r', 1e-6);
+
+            // On exit reduce the opacity of text labels
+            nodeExit.select('text')
+                .style('fill-opacity', 1e-6);
+
+            // ****************** Links section ***************************
+
+            // Update the links...
+            var link = svg.selectAll('path.link')
+                .data(links, function(d) { return d.id; });
+
+            // Enter any new links at the parent's previous position.
+            var linkEnter = link.enter().insert('path', "g")
+                .attr("class", "link")
+                .attr('d', function(d){
+                    var o = {x: source.x0, y: source.y0};
+                    return diagonal(o, o);
+                });
+
+            // UPDATE
+            var linkUpdate = linkEnter.merge(link);
+
+            // Transition back to the parent element position
+            linkUpdate.transition()
+                .duration(duration)
+                .attr('d', function(d){ return diagonal(d, d.parent); });
+
+            // Remove any exiting links
+            var linkExit = link.exit().transition()
+                .duration(duration)
+                .attr('d', function(d) {
+                    var o = {x: source.x, y: source.y};
+                    return diagonal(o, o);
+                })
+                .remove();
+
+            // Store the old positions for transition.
+            nodes.forEach(function(d){
+                d.x0 = d.x;
+                d.y0 = d.y;
             });
 
-        // Animate the days remaining
-        daysRemainingElement.transition()
-            .duration(2000)
-            .tween("text", function() {
-                const i = d3.interpolate(daysRemaining + 50, daysRemaining); // Adjust start value for a smoother animation
-                return function(t) {
-                    daysRemainingElement.text(`${Math.ceil(i(t))} days to go for ${nextYear}.`);
-                };
-            });
+            // Creates a curved (diagonal) path from parent to the child nodes
+            function diagonal(s, d) {
+                return `M ${s.y} ${s.x}
+                        C ${(s.y + d.y) / 2} ${s.x},
+                          ${(s.y + d.y) / 2} ${d.x},
+                          ${d.y} ${d.x}`;
+            }
 
-        // Animate the upcoming year display
-        nextYearElement.transition()
-            .duration(2000)
-            .tween("text", function() {
-                const i = d3.interpolate(0, nextYear);
-                return function(t) {
-                    // nextYearElement.text(`Upcoming Year: ${Math.floor(i(t))}`);
-                };
-            });
-    }
-
-    // Initial call to update the progress bar
-    updateProgressBar();
-
-    // Update the progress bar every day
-    setInterval(updateProgressBar, 86400000); // 86400000ms = 1 day
-
-</script>
-
+            // Toggle children on click.
+            function click(event, d) {
+                if (d.children) {
+                    d._children = d.children;
+                    d.children = null;
+                } else {
+                    d.children = d._children;
+                    d._children = null;
+                }
+                update(d);
+            }
+        }
+    </script>
 </body>
 </html>
